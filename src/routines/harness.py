@@ -81,14 +81,20 @@ async def run_routine(routine: Routine) -> str:
 
     # === Configure Agent SDK ===
     # The magic: setting_sources=["project"] and cwd="/Pondside"
-    # This loads the hooks from /Pondside/.claude/, which inject
-    # the pattern metadata, which routes through AlphaPattern.
-    client_header = f"x-loom-client: routine:{routine.name}"
+    # This loads the hooks from /Pondside/.claude/.
+    #
+    # NOTE: We explicitly set x-loom-pattern here because hooks don't
+    # reliably receive the LOOM_PATTERN env var from settings.json.
+    # The SDK's env parameter may not propagate to hook subprocesses.
+    custom_headers = "\n".join([
+        f"x-loom-client: routine:{routine.name}",
+        "x-loom-pattern: alpha",
+    ])
 
     options = ClaudeAgentOptions(
         env={
             **dict(os.environ),  # Inherit all env vars
-            "ANTHROPIC_CUSTOM_HEADERS": client_header,
+            "ANTHROPIC_CUSTOM_HEADERS": custom_headers,
         },
         allowed_tools=routine.get_allowed_tools(),
         permission_mode="bypassPermissions",
