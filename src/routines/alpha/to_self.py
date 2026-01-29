@@ -101,15 +101,22 @@ When you're done, the harness stores your letter for tomorrow's system prompt.
 </routine>"""
 
     def handle_output(self, output: str, ctx: RoutineContext) -> None:
-        """Store the letter in Redis for tomorrow's system prompt."""
+        """Store the letter in Redis for tomorrow's system prompt.
+
+        We store just the raw letter—the Loom adds the header when assembling
+        the PAST section. Separation of concerns: generators produce content,
+        Loom handles presentation.
+        """
         r = get_redis()
 
-        # Add header for system prompt injection
-        header = f"**Letter from last night** ({ctx.now.format('h:mm A')}):\n\n"
-        full_letter = header + output.strip()
+        # Store raw letter with timestamp in a separate key for the Loom to use
+        letter_data = output.strip()
 
-        r.setex(LETTER_KEY, LETTER_TTL, full_letter)
-        logger.info(f"Stored letter ({len(full_letter)} chars) with {LETTER_TTL // 3600}h TTL")
+        # Also store the timestamp so the Loom can format the header
+        r.setex(LETTER_KEY, LETTER_TTL, letter_data)
+        r.setex(f"{LETTER_KEY}:time", LETTER_TTL, ctx.now.format("h:mm A"))
+
+        logger.info(f"Stored letter ({len(letter_data)} chars) with {LETTER_TTL // 3600}h TTL")
 
     def get_allowed_tools(self) -> list[str]:
         """Minimal tools for letter-writing."""
