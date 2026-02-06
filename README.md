@@ -4,7 +4,7 @@ Alpha's autonomous execution framework. A framework for building non-human-in-th
 
 ## Overview
 
-Routines are scheduled or on-demand tasks that run through the full AlphaPattern pipeline. They inherit hooks and get proper orientation (HUD, weather, calendars, todos) just like Duckpond sessions.
+Routines are scheduled or on-demand tasks that run through AlphaClient from alpha_sdk. They get the full Alpha transformation—soul, plugins (agents + skills), memory recall/suggest, and Logfire observability—automatically.
 
 ## Installation
 
@@ -32,12 +32,12 @@ The harness does the heavy lifting:
 
 1. **Load the routine** by name from the registry
 2. **Check Redis** for session state (if the routine manages sessions)
-3. **Initialize the Claude Agent SDK** with `setting_sources=["project"]` and `cwd="/Pondside"`
+3. **Initialize AlphaClient** — handles soul, plugin loading, memory, observability
 4. **Run the agent** with the routine's prompt
 5. **Collect output** and call the routine's handler
 6. **Save session state** (if applicable)
 
-Because routines use `setting_sources=["project"]`, they load the hooks from `/Pondside/.claude/`. Those hooks inject pattern metadata, which routes through AlphaPattern. This means routines get the full Alpha experience—soul, HUD, memories, the works.
+AlphaClient handles everything that used to require proxy pipelines and hooks. Routines get the full Alpha experience automatically.
 
 ## Writing a Routine
 
@@ -84,9 +84,6 @@ Human sessions (Duckpond) are tracked in Redis at `routine:human_session` with a
 
 Routines that manage their own sessions use `session_key` and `session_ttl`. The harness handles all the Redis get/set logic.
 
-## Client Header
+## Identification
 
-Routines identify themselves via `x-loom-client: routine:{name}`. This header:
-- Excludes routines from human session tracking
-- Enables future routing decisions in the Loom
-- Provides observability in traces
+Routines identify themselves via `client_name=routine:{name}` in AlphaClient. This appears in Logfire traces for observability.

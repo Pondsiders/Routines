@@ -3,18 +3,24 @@
 This is the core of the framework. It:
 1. Loads the routine by name
 2. Checks Redis for session state (if applicable)
-3. Initializes the Claude Agent SDK with project settings
-4. Runs the agent with the routine's prompt
-5. Collects output and calls the routine's handler
-6. Saves session state (if applicable)
+3. Runs the routine through AlphaClient (full Alpha transformation)
+4. Collects output and calls the routine's handler
+5. Saves session state (if applicable)
+
+Uses AlphaClient from alpha_sdk, which handles:
+- System prompt assembly (soul + orientation)
+- Plugin loading (agents, skills)
+- Memory recall and suggest
+- Observability
 """
 
-import asyncio
 import logging
 import os
 
 import pendulum
 import redis
+
+from alpha_sdk import AlphaClient
 
 from .protocol import Routine, RoutineContext
 
@@ -35,8 +41,8 @@ async def run_routine(routine: Routine) -> str:
     This is the main execution function. It:
     1. Checks for existing session (if routine has session_key)
     2. Builds the prompt
-    3. Initializes the Agent SDK with proper settings
-    4. Runs the query and collects output
+    3. Runs through AlphaClient (handles soul, plugins, memories, everything)
+    4. Collects output
     5. Saves session state (if applicable)
     6. Calls the routine's output handler
 
@@ -46,7 +52,7 @@ async def run_routine(routine: Routine) -> str:
     Returns:
         The collected text output from the agent.
     """
-    from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, ResultMessage
+    from claude_agent_sdk import AssistantMessage, ResultMessage
 
     now = pendulum.now("America/Los_Angeles")
     r = get_redis()
@@ -79,55 +85,34 @@ async def run_routine(routine: Routine) -> str:
     prompt = routine.build_prompt(ctx)
     logger.info(f"Built prompt ({len(prompt)} chars)")
 
-    # === Configure Agent SDK ===
-    # The magic: setting_sources=["project"] and cwd="/Pondside"
-    # This loads the hooks from /Pondside/.claude/.
-    #
-    # NOTE: We explicitly set x-loom-pattern here because hooks don't
-    # reliably receive the LOOM_PATTERN env var from settings.json.
-    # The SDK's env parameter may not propagate to hook subprocesses.
-    custom_headers = "\n".join([
-        f"x-loom-client: routine:{routine.name}",
-        "x-loom-pattern: alpha",
-    ])
-
-    options = ClaudeAgentOptions(
-        env={
-            **dict(os.environ),  # Inherit all env vars
-            "ANTHROPIC_CUSTOM_HEADERS": custom_headers,
-        },
-        allowed_tools=routine.get_allowed_tools(),
-        permission_mode="bypassPermissions",
+    # === Run through AlphaClient ===
+    async with AlphaClient(
         cwd="/Pondside",
-        setting_sources=["project"],
-        resume=session_id,
-        fork_session=routine.fork_session if session_id else False,
-    )
+        client_name=f"routine:{routine.name}",
+        permission_mode="bypassPermissions",
+        allowed_tools=routine.get_allowed_tools(),
+    ) as client:
+        await client.query(prompt, session_id=session_id)
 
-    # === Run the agent ===
-    output_parts: list[str] = []
-    captured_session_id: str | None = None
+        output_parts: list[str] = []
 
-    logger.info(f"Starting agent (session={'resume ' + session_id[:8] if session_id else 'new'}...)")
+        logger.info(f"Starting agent (session={'resume ' + session_id[:8] if session_id else 'new'}...)")
 
-    async with ClaudeSDKClient(options=options) as client:
-        await client.query(prompt)
-
-        async for message in client.receive_response():
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
+        async for event in client.stream():
+            if isinstance(event, AssistantMessage):
+                for block in event.content:
                     if hasattr(block, "text") and block.text:
                         output_parts.append(block.text)
                         # Stream to stdout for observability
                         print(block.text, end="", flush=True)
 
-            elif isinstance(message, ResultMessage):
-                captured_session_id = message.session_id
-                logger.info(f"Agent complete: {message.subtype}")
+            elif isinstance(event, ResultMessage):
+                logger.info(f"Agent complete: {event.subtype}")
 
-    print()  # Newline after streaming output
+        print()  # Newline after streaming output
 
-    output = "".join(output_parts)
+        output = "".join(output_parts)
+        captured_session_id = client.session_id
 
     # === Save session state ===
     if routine.session_key and routine.session_ttl:
@@ -138,7 +123,7 @@ async def run_routine(routine: Routine) -> str:
         elif not is_new_session and not routine.fork_session:
             # Resumed session (not forked) - refresh TTL
             r.expire(routine.session_key, routine.session_ttl)
-            logger.info(f"Refreshed session TTL")
+            logger.info("Refreshed session TTL")
         # If forked, we don't update the original session key
 
     # === Call output handler ===

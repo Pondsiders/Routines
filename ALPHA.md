@@ -31,7 +31,7 @@ routines info alpha.to_self
 
 - **`registry.py`** - `@register` decorator adds routines to global registry. Routines are instantiated on-demand via `get(name)`.
 
-- **`harness.py`** - Execution engine that orchestrates: session lookup → prompt building → Agent SDK initialization → streaming execution → session persistence → output handling.
+- **`harness.py`** - Execution engine that orchestrates: session lookup → prompt building → AlphaClient initialization → streaming execution → session persistence → output handling. Uses AlphaClient from alpha_sdk for full Alpha transformation (soul, plugins, memory, observability).
 
 - **`cli.py`** - Click CLI entry point. Calls `load_routines()` to trigger registration on startup.
 
@@ -40,7 +40,7 @@ routines info alpha.to_self
 1. Registry lookup by name
 2. Check Redis for session (using `fork_from_key` or `session_key`)
 3. Build prompt with `RoutineContext` (Pacific time via Pendulum)
-4. Initialize Claude Agent SDK with `setting_sources=["project"]` and `cwd="/Pondside"` (loads hooks from `/Pondside/.claude/`)
+4. Initialize AlphaClient (handles soul, plugin loading, memory recall/suggest, Logfire observability)
 5. Stream query, collect output
 6. Save/refresh session if applicable
 7. Call `handle_output()`
@@ -53,11 +53,7 @@ routines info alpha.to_self
 
 ### Key Patterns
 
-Custom headers are set explicitly in harness (env vars don't reliably propagate to hook subprocesses):
-- `x-loom-client: routine:{name}` - Excludes from human session tracking
-- `x-loom-pattern: alpha` - Routes through AlphaPattern
-
-Routines store raw content in Redis; Loom handles presentation/formatting separately.
+AlphaClient handles all transformation (soul, plugins, memory, observability) directly—no proxy pipeline needed. The `client_name` parameter (set to `routine:{name}`) identifies the routine in logs and traces.
 
 ## Adding a Routine
 
