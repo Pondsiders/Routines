@@ -21,6 +21,7 @@ import pendulum
 import redis
 
 from alpha_sdk import AlphaClient
+from alpha_sdk.observability import configure as configure_logfire
 
 from .protocol import Routine, RoutineContext
 
@@ -53,6 +54,9 @@ async def run_routine(routine: Routine) -> str:
         The collected text output from the agent.
     """
     from claude_agent_sdk import AssistantMessage, ResultMessage
+
+    # Configure Logfire with routine-specific service name
+    configure_logfire(service_name=f"routine:{routine.name}")
 
     now = pendulum.now("America/Los_Angeles")
     r = get_redis()
