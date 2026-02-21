@@ -87,7 +87,8 @@ def info(name: str):
     click.echo(f"  Session key: {routine.session_key or '(stateless)'}")
     click.echo(f"  Session TTL: {routine.session_ttl or 'N/A'} seconds")
     click.echo(f"  Fork session: {routine.fork_session}")
-    click.echo(f"  Tools: {', '.join(routine.get_allowed_tools())}")
+    disallowed = routine.get_disallowed_tools()
+    click.echo(f"  Disallowed tools: {', '.join(disallowed) if disallowed else '(none)'}")
 
 
 def main():

@@ -94,7 +94,7 @@ async def run_routine(routine: Routine) -> str:
         cwd="/Pondside",
         client_name=f"routine:{routine.name}",
         permission_mode="bypassPermissions",
-        allowed_tools=routine.get_allowed_tools(),
+        disallowed_tools=routine.get_disallowed_tools(),
     ) as client:
         await client.query(prompt, session_id=session_id)
 

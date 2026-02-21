@@ -14,7 +14,7 @@ import os
 import pendulum
 import redis
 
-from ..protocol import RoutineContext
+from ..protocol import DEFAULT_DISALLOWED_TOOLS, RoutineContext
 from ..registry import register
 
 logger = logging.getLogger(__name__)
@@ -118,8 +118,8 @@ When you're done, the harness stores your letter for tomorrow's system prompt.
 
         logger.info(f"Stored letter ({len(letter_data)} chars) with {LETTER_TTL // 3600}h TTL")
 
-    def get_allowed_tools(self) -> list[str]:
-        """Minimal tools for letter-writing."""
-        return ["Read", "Bash"]  # Bash for cortex commands
+    def get_disallowed_tools(self) -> list[str]:
+        """Block interactive tools — nobody's awake to answer."""
+        return DEFAULT_DISALLOWED_TOOLS
 
 

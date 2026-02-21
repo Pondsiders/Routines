@@ -57,5 +57,7 @@ def load_routines():
     """
     # Import routine modules here - they use @register decorator
     from .alpha import to_self  # noqa: F401
+    from .alpha import today  # noqa: F401
+    from .alpha import solitude  # noqa: F401
 
     logger.info(f"Loaded {len(_registry)} routines")

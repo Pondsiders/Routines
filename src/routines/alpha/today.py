@@ -19,7 +19,7 @@ import pendulum
 import psycopg
 import redis
 
-from ..protocol import RoutineContext
+from ..protocol import DEFAULT_DISALLOWED_TOOLS, RoutineContext
 from ..registry import register
 
 logger = logging.getLogger(__name__)
@@ -163,6 +163,6 @@ No headers, no bullet points. Just the handoff.
 
         logger.info(f"Stored summary ({len(summary)} chars) with {SUMMARY_TTL // 60}min TTL")
 
-    def get_allowed_tools(self) -> list[str]:
-        """No tools needed—pure summarization."""
-        return []
+    def get_disallowed_tools(self) -> list[str]:
+        """Block interactive tools — nobody's awake to answer."""
+        return DEFAULT_DISALLOWED_TOOLS

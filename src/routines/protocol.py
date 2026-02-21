@@ -5,6 +5,14 @@ from typing import Protocol
 import pendulum
 
 
+# Tools that make no sense in autonomous operation (nobody to interact with)
+DEFAULT_DISALLOWED_TOOLS = [
+    "EnterPlanMode",
+    "ExitPlanMode",
+    "AskUserQuestion",
+]
+
+
 @dataclass
 class RoutineContext:
     """Context passed to routines during execution."""
@@ -69,9 +77,11 @@ class Routine(Protocol):
         """
         ...
 
-    def get_allowed_tools(self) -> list[str]:
-        """Return the list of tools this routine is allowed to use.
+    def get_disallowed_tools(self) -> list[str]:
+        """Return tools to block for this routine.
 
-        Override to customize. Default is a reasonable set for most routines.
+        Defaults to DEFAULT_DISALLOWED_TOOLS (EnterPlanMode, ExitPlanMode,
+        AskUserQuestion — tools that require human interaction).
+        All other tools are available automatically.
         """
         ...
