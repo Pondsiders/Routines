@@ -136,8 +136,8 @@ wheels = [
 
 [[package]]
 name = "alpha-sdk"
-version = "0.5.2"
-source = { git = "https://github.com/Pondsiders/Alpha-SDK?rev=main#2dda6ee4268cc243a9e19e3bfe82494e1c5e55da" }
+version = "0.5.3"
+source = { registry = "https://pondsiders.github.io/Alpha-SDK/simple/" }
 dependencies = [
     { name = "aiohttp" },
     { name = "asyncpg" },
@@ -157,6 +157,9 @@ dependencies = [
     { name = "rich" },
     { name = "typer" },
     { name = "yt-dlp" },
+]
+wheels = [
+    { url = "https://pondsiders.github.io/Alpha-SDK/simple/alpha-sdk/alpha_sdk-0.5.3-py3-none-any.whl" },
 ]
 
 [[package]]
@@ -2036,7 +2039,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alpha-sdk", git = "https://github.com/Pondsiders/Alpha-SDK?rev=main" },
+    { name = "alpha-sdk", specifier = ">=0.5,<1.0", index = "https://pondsiders.github.io/Alpha-SDK/simple/" },
     { name = "click", specifier = ">=8.1.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1" },
